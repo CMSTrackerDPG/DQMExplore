@@ -1,8 +1,7 @@
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from dqmexplore.dataproc import generate_me_dict, normalize, integrate, trig_normalize
+from dqmexplore.medata import MEData
 
 
 # Plotting function
@@ -11,7 +10,7 @@ def plot1DMEs(
     fig_title="",
     ax_labels=None,
     trigger_rates=None,
-    ref_df=None,
+    ref_data=None,
     norm=False,
     show=False,
     hspace=0.05,
@@ -23,53 +22,50 @@ def plot1DMEs(
     Create interactive per-LS plotly figure from monitoring element(s) dataframe. Just for one run and for 1D MEs.
     """
 
-    # Check
-    if ref_df is not None:
-        if not norm:
-            raise ValueError("To display reference, you must normalize the MEs.")
+    if (not isinstance(me_data, MEData)) or (
+        not isinstance(ref_data, MEData) and ref_data is not None
+    ):  # Check data data types
+        raise TypeError("Data must be of type MEData")
 
-    # Extraction
-    if isinstance(me_data, pd.DataFrame):
-        me_dict = generate_me_dict(me_data)
-    elif isinstance(me_data, dict):
-        me_dict = me_data
-    else:
-        raise ValueError("Wrong type for me_data.")
+    if (
+        norm and trigger_rates is not None
+    ):  # There shouldn't be the both types of normalizations at the same time
+        raise ValueError("Normalize by area or trigger rate, not both.")
 
-    # Processing
+    # # Normalizing
     if trigger_rates is not None:
-        me_dict = trig_normalize(me_dict, trigger_rates)
-    if norm:
-        me_dict = normalize(me_dict)
+        to_plot = "trignorm"
+        me_data.normData(trigger_rates)
+    elif norm:
+        to_plot = "norm"
+        me_data.normData()
+    else:
+        to_plot = "data"
 
     # Integrate reference data if given
-    if ref_df is not None:
-        ref_dict = generate_me_dict(ref_df)
-        ref_dict = integrate(ref_dict)
-        ref_dict = normalize(ref_dict)
-    else:
-        ref_dict = None
+    if ref_data is not None:
+        ref_data.integrateData(norm=True)
 
     # Plotting
     fig = create_plot(
-        me_dict,
+        me_data,
         fig_title=fig_title,
         hspace=hspace,
         vspace=vspace,
         width=width,
         height=height,
         ax_labels=ax_labels,
-        ref_dict=ref_dict,
+        ref_data=ref_data,
+        to_plot=to_plot,
     )
 
     if show:
         fig.show()
-    else:
-        return fig
+    return fig
 
 
 def plot2DMEs(
-    me_df,
+    me_data,
     fig_title="",
     hspace=0.05,
     vspace=0.15,
@@ -79,50 +75,62 @@ def plot2DMEs(
     trigger_rates=None,
     show=False,
 ):
+    if not isinstance(me_data, MEData):
+        raise TypeError("Data must be of type MEData")
 
-    # Extraction
-    me_dict = generate_me_dict(me_df)
-
-    # Processing
     if trigger_rates is not None:
-        me_dict = trig_normalize(me_dict, trigger_rates)
+        to_plot = "trignorm"
+        me_data.normData(trigger_rates)
+    else:
+        to_plot = "data"
 
     # Plotting
     fig = create_plot(
-        me_dict,
+        me_data,
         fig_title=fig_title,
         ax_labels=ax_labels,
         hspace=hspace,
         vspace=vspace,
         width=width,
         height=height,
+        to_plot=to_plot,
     )
 
     if show:
         fig.show()
-    else:
-        return fig
+    return fig
 
 
 def create_plot(
-    me_dict, fig_title, hspace, vspace, width, height, ref_dict=None, ax_labels=None
+    me_data,
+    fig_title,
+    hspace,
+    vspace,
+    width,
+    height,
+    ref_data=None,
+    ax_labels=None,
+    to_plot=None,
 ):
     """
     Creates plotly interactive per-LS plot
     """
+    if to_plot is None:
+        raise ValueError("Specify what will be plotted")
 
-    all_1D = np.array([me_info["me_id"] <= 95 for me_info in me_dict.values()]).all()
-    if (not all_1D) and (ref_dict is not None):
+    # Check dimensions
+    all_1D = np.array([me_data.getDims(me) == 1 for me in me_data.getMENames()]).all()
+    if (not all_1D) and (ref_data is not None):
         raise ValueError(
             "Reference data given for invalid ME type(s). Plot 2D reference MEs separately."
         )
 
     # Getting info about data
-    num_mes = len(me_dict)
-    num_lss = len(me_dict[list(me_dict.keys())[0]]["data"])
+    num_mes = len(me_data)
+    num_lss = me_data.getNumLSs()
     num_rows = (num_mes + 1) // 2
     num_cols = 2 if num_mes > 1 else 1
-    mes = list(me_dict.keys())
+    mes = me_data.getMENames()
 
     # Making subplot and traces
     fig = make_subplots(
@@ -140,15 +148,15 @@ def create_plot(
         row = (i // num_cols) + 1
         col = (i % num_cols) + 1
         for ls in range(num_lss):
-            if me_dict[me]["me_id"] <= 95:
+            if me_data.getDims(me) == 1:
                 trace = go.Bar()
-                trace.x = me_dict[me]["x_bins"]
-                trace.y = me_dict[me]["data"][ls]
-            elif me_dict[me]["me_id"] >= 96:
+                trace.x = me_data.getBins(me, dim="x")
+                trace.y = me_data.getData(me, ls=ls, type=to_plot)
+            elif me_data.getDims(me) == 2:
                 trace = go.Heatmap()
-                trace.x = me_dict[me]["x_bins"]
-                trace.y = me_dict[me]["y_bins"]
-                trace.z = me_dict[me]["data"][ls]
+                trace.x = me_data.getBins(me, dim="x")
+                trace.y = me_data.getBins(me, dim="y")
+                trace.z = me_data.getData(me, ls=ls, type=to_plot)
             trace.name = me
 
             trace.visible = ls == 0
@@ -193,22 +201,22 @@ def create_plot(
         row = (i // num_cols) + 1
         col = (i % num_cols) + 1
 
-        max_data = me_dict[me]["data"].max()
-        if me_dict[me]["me_id"] <= 95:
+        max_data = me_data.getData(me, type=to_plot).max()
+        if me_data.getDims(me) == 1:
             fig.update_yaxes(range=[0, max_data], row=row, col=col)
 
-        if me_dict[me]["me_id"] >= 96:
+        if me_data.getDims(me) == 2:
             fig.update_traces(showscale=False)
 
         if ax_labels is not None:
             fig.update_xaxes(title_text=ax_labels[i]["x"], row=row, col=col)
             fig.update_yaxes(title_text=ax_labels[i]["y"], row=row, col=col)
 
-        if ref_dict is not None:
+        if ref_data is not None:
             trace_ref = go.Scatter()
             trace_ref.name = me + "-Reference"
-            trace_ref.x = ref_dict[me]["x_bins"]
-            trace_ref.y = ref_dict[me]["data"][0]
+            trace_ref.x = ref_data.getBins(me, dim="x")
+            trace_ref.y = ref_data.getData(me, type="integral")
             trace_ref.opacity = 0.6
             trace_ref.line = dict(shape="hvh")
             fig.add_trace(trace_ref, row=row, col=col)

@@ -1,11 +1,10 @@
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-from dqmexplore.dataproc import generate_me_dict, trig_normalize
-from dqmexplore.exploreutils import check_empty_lss
+from dqmexplore.utils.datautils import generate_me_dict, trig_normalize, check_empty_lss
 
 
-def compute_trends(data, trigger_rates=None):
+def compute_trends(medata, trigger_rates=None):
     def compute_avg(histbins, x_bins):
         weighted_sums = np.sum(histbins * x_bins, axis=1)
         sum_of_weights = np.sum(histbins, axis=1)
@@ -19,29 +18,28 @@ def compute_trends(data, trigger_rates=None):
         std_dev = np.sqrt(variance)
         return std_dev
 
-    if isinstance(data, pd.DataFrame):
-        data = generate_me_dict(data)
-
     if trigger_rates is not None:
-        data = trig_normalize(data, trigger_rates)
-
-    empty_lss = check_empty_lss(data, thrshld=0)
+        to_analyze = "trignorm"
+        medata.normData(trigger_rate=trigger_rates)
+    else:
+        to_analyze = "data"
 
     trends = {}
 
-    for me in data.keys():
+    for me in medata.getMENames():
         trends[me] = {}
-        histbins = data[me]["data"]
-        x_bins = data[me]["x_bins"]
+        histbins = medata.getData(me, type=to_analyze)
+        x_bins = medata.getBins(me, dim="x")
         trends[me]["mean"] = compute_avg(histbins, x_bins)  # e.g. mean charge
         trends[me]["stdev"] = compute_std(
             histbins, x_bins, trends[me]["mean"]
         )  # e.g. std of charge
-        trends[me]["max"] = x_bins[np.argmax(histbins, axis=1)]  # e.g. max charge
+        trends[me]["mpv"] = x_bins[np.argmax(histbins, axis=1)]  # e.g. mpv charge
+        trends[me]["max"] = np.max(histbins, axis=1)
         trends[me]["std_err_on_mean"] = trends[me]["stdev"] / np.sqrt(
-            data[me]["data"].shape[1]
+            histbins.shape[1]
         )
-        trends[me]["empty_lss"] = np.array(empty_lss[me]["empty_lss"])
+        trends[me]["empty_lss"] = np.array(medata.getEmptyLSs(me))
 
     return trends
 
@@ -49,7 +47,7 @@ def compute_trends(data, trigger_rates=None):
 def plot_trends(
     trends,
     me,
-    to_plot=["mean", "stdev", "max"],
+    to_plot=["mean", "stdev", "mpv", "max"],
     fig_titles=[],
     ylabels=[],
     norm=False,
