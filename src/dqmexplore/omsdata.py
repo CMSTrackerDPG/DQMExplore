@@ -4,22 +4,23 @@ import dask
 from dask import delayed
 from dqmexplore.utils.datautils import makeDF
 
+
 class OMSData:
     def __init__(self, dials):
         self.dials = dials
-        self.runfilters = [] # List of filters for runs
-        self.filters = [] # List of other types of filters (e.g. max num lss)
+        self.runfilters = []  # List of filters for runs
+        self.filters = []  # List of other types of filters (e.g. max num lss)
         self.endpoints = [
             "runs",
             "runkeys",
-            "l1configurationkey", # Not working
+            "l1configurationkey",  # Not working
             "l1algorithmtriggers",
             "hltconfigdata",
-            "deadtime", # 
+            "deadtime",  #
             "daqreadouts",
-            "fill", #
-            "l1triggerrate", # Not working
-            "lumisections"
+            "fill",  #
+            "l1triggerrate",  # Not working
+            "lumisections",
         ]
         self._resetDataDict()
 
@@ -34,10 +35,10 @@ class OMSData:
 
     def _resetFilters(self):
         self.filters = []
-        
+
     def _resetRunFilters(self):
         self.runfilters = []
-        
+
     def getEndpoints(self):
         return self.endpoints
 
@@ -49,7 +50,7 @@ class OMSData:
         for runFilter in self.runfilters:
             runnbs.append(runFilter.value)
         return runnbs
-        
+
     def getFilters(self):
         return self.filters
 
@@ -58,28 +59,41 @@ class OMSData:
 
     def getAvailFtrs(self, which="all"):
         if which == "all":
-            return {key: df.columns.to_list() if isinstance(df, pd.DataFrame) else None for key, df in self._data.items()}
+            return {
+                key: df.columns.to_list() if isinstance(df, pd.DataFrame) else None
+                for key, df in self._data.items()
+            }
         elif which == "numerical":
-            return {key: df.select_dtypes(include=[int, float]).columns.to_list() if isinstance(df, pd.DataFrame) else None for key, df in self._data.items()}
+            return {
+                key: (
+                    df.select_dtypes(include=[int, float]).columns.to_list()
+                    if isinstance(df, pd.DataFrame)
+                    else None
+                )
+                for key, df in self._data.items()
+            }
         elif which == "bools":
-            return {key: df.select_dtypes(include=[bool]).columns.to_list() if isinstance(df, pd.DataFrame) else None for key, df in self._data.items()}
+            return {
+                key: (
+                    df.select_dtypes(include=[bool]).columns.to_list()
+                    if isinstance(df, pd.DataFrame)
+                    else None
+                )
+                for key, df in self._data.items()
+            }
         else:
             return None
-        
+
     def setRuns(self, runnbs: list, keep_prev=True):
-        if keep_prev == False:
+        if not keep_prev:
             self._resetRunFilters()
         for runnb in runnbs:
             self.runfilters.append(
-                OMSFilter(
-                    attribute_name="run_number", 
-                    value=runnb,
-                    operator="EQ"
-                )
+                OMSFilter(attribute_name="run_number", value=runnb, operator="EQ")
             )
-            
+
     def setFilters(self, filters: dict, keep_prev=True):
-        if keep_prev == False:
+        if not keep_prev:
             self._resetFilters()
         for filter in filters:
             self.filters.append(OMSFilter(**dict))
@@ -90,14 +104,16 @@ class OMSData:
         """
         if not keep_prev:
             self._resetDataDict(endpoint=endpoint)
-    
+
         @delayed
         def fetch_single_filter(runFilter):
             try:
-                query_result = self.dials.oms.query(endpoint=endpoint, filters=[runFilter])
+                query_result = self.dials.oms.query(
+                    endpoint=endpoint, filters=[runFilter]
+                )
                 if query_result:
                     df = makeDF(query_result)
-    
+
                     # Specific indexing based on endpoint
                     if endpoint == "runs":
                         df["run_number_idx"] = df["run_number"]
@@ -112,7 +128,7 @@ class OMSData:
             except Exception as e:
                 print(f"WARNING: Unable to fetch data for filter {runFilter}: {e}")
                 return None
-    
+
         tasks = [fetch_single_filter(runFilter) for runFilter in self.runfilters]
         results = dask.compute(*tasks)
         for df in results:
@@ -120,4 +136,4 @@ class OMSData:
                 if self._data[endpoint] is None:
                     self._data[endpoint] = df
                 else:
-                    self._data[endpoint] = pd.concat([self._data[endpoint], df])    
+                    self._data[endpoint] = pd.concat([self._data[endpoint], df])

@@ -5,6 +5,7 @@ import json
 import requests
 from dqmexplore.me_ids import meIDs1D, meIDs2D
 
+
 def generate_me_dict(me_df):
     """
     Reformats monitoring element dataframe and outputs out a reduced version of it in dictionary form, putting the data into a np array which allows for vectorized operations.
@@ -120,6 +121,7 @@ def print_availMEs(dials, dims=None, contains=""):
     for me in mes_df[mes_df["me"].str.contains(contains)]["me"]:
         print(me)
 
+
 def loadJSONasDF(JSONFilePath):
     if not os.path.exists(JSONFilePath):
         raise FileNotFoundError(
@@ -131,22 +133,23 @@ def loadJSONasDF(JSONFilePath):
         JSONdict = json.load(f)
     try:
         jsondf = pd.DataFrame(JSONdict).convert_dtypes()
-    except:
+    except Exception:
         jsondf = pd.DataFrame(JSONdict.items()).convert_dtypes()
     return jsondf
 
+
 def loadFromWeb(url, output_file):
     try:
-        # Make request and check if succesful
+        # Make request and check if successful
         response = requests.get(url)
         if response.status_code == 200:
             # Parse the response content as JSON
             data = response.json()
-            
+
             # Store the data as JSON
-            with open(output_file, 'w') as file:
+            with open(output_file, "w") as file:
                 json.dump(data, file, indent=4)
-            
+
             print(f"Data successfully fetched and stored in {output_file}")
         else:
             print(f"Failed to fetch data. HTTP Status Code: {response.status_code}")

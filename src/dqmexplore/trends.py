@@ -36,9 +36,7 @@ def compute_trends(medata, trigger_rates=None):
         )  # e.g. std of charge
         trends[me]["mpv"] = x_bins[np.argmax(histbins, axis=1)]  # e.g. mpv charge
         trends[me]["max"] = np.max(histbins, axis=1)
-        trends[me]["std_err_on_mean"] = trends[me]["stdev"] / np.sqrt(
-            histbins.shape[1]
-        )
+        trends[me]["std_err_on_mean"] = trends[me]["stdev"] / np.sqrt(histbins.shape[1])
         trends[me]["empty_lss"] = np.array(medata.getEmptyLSs(me))
 
     return trends
