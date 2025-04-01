@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Optional: accept ID and secret via command-line arguments
 SSO_CLIENT_ID_INPUT=$1
 SSO_CLIENT_SECRET_INPUT=$2
 
@@ -16,15 +15,11 @@ fi
 mkdir -p DQME
 cd DQME
 
-# Create virtual environment
+# Create virtual environment & install dependencies
 python3.11 -m venv venv
 source venv/bin/activate
-
-# Clone the repository
 git clone https://github.com/CMSTrackerDPG/DQMExplore
 cd DQMExplore
-
-# Install the package
 pip3 install .
 
 # Write the .env file
