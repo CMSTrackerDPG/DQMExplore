@@ -1,28 +1,41 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "dqmexplore"
 version = "0.2.0"
 description = "A consolidation of DQM data exploration tools."
 authors = [
-    {name = "Gabriele Benelli",email = "gabriele.benelli@cern.ch"},
-    {name = "Roy F. Cruz",email = "roy.cruz.candelaria@cern.ch"},
-    {name = "Tetiana Mazurets",email = "tetiana.mazurets@cern.ch"},
-    {name = "Richa Sharma",email = "richa.sharma@cern.ch"}
+    {name = "Gabriele Benelli", email = "gabriele.benelli@cern.ch"},
+    {name = "Roy F. Cruz", email = "roy.cruz.candelaria@cern.ch"},
+    {name = "Tetiana Mazurets", email = "tetiana.mazurets@cern.ch"},
+    {name = "Richa Sharma", email = "richa.sharma@cern.ch"}
 ]
 readme = "README.md"
-repository = "https://github.com/CMSTrackerDPG/DQMExplore/tree/main"
-packages = [
-    { include = "dqmexplore" }
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "cmsdials[pandas,tqdm]>=1.5.0",
+    "notebook>=7.3.2",
+    "runregistry>=3.1.1",
+    "plotly>=6.0.0",
+    "dask>=2025.2.0",
 ]
-packages-dir = {"" = "src"}
-requires-python = ">=3.10,<4.0"
 
-[tool.poetry.dependencies]
-cmsdials = {git = "ssh://git@gitlab.cern.ch:7999/cms-dqmdc/libraries/dials-py.git", extras = ["pandas", "tqdm"]}
-notebook = "^7.3.2"
-runregistry = "^3.1.1"
-plotly = "^6.0.0"
-dask = "^2025.2.0"
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.6.2",
+]
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[project.scripts]
+fetch_refruns = "scripts.fetch_refruns:main"
+fetch_golden = "scripts.fetch_golden:main"
+
+[project.urls]
+Repository = "https://github.com/CMSTrackerDPG/DQMExplore"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
