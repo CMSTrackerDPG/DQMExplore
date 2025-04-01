@@ -1,37 +1,73 @@
 # DQMExplore
 
-This repository hosts `dqmexplore`, a Python software package that provides tools to facilitate the exploration of CMS DQM data for shifters, shift leaders, and experts. These tools enable the evaluation of runs at a per-lumisection level by allowing the user to plot 1D and 2D monitoring elements as well as trends in these using data obtained from the [DIALS Python API](https://github.com/cms-DQM/dials-py). In addition, it provides notebooks to facilitate the use data from sources such as OMS, Run Registry and CertHelper is a programatic way.
+This repository hosts `dqmexplore`, a Python software toolkit aimed at facilitating the exploration of CMS DQM data for shifters, shift leaders, and experts. These tools enable the programmatic evaluation of runs at the per-lumisection level by allowing users to make interactive plots of 1D and 2D monitoring elements, as well as trends, using data obtained from the [DIALS Python API](https://github.com/cms-DQM/dials-py). In addition, it provides scripts to facilitate the use of data from sources such as OMS, Run Registry, and CertHelper.
 
 ## Setup
 
-The tools offered in this repo are meant to be primarily used in [SWAN](https://swan.web.cern.ch/swan/). The tools provided by `dqmexplore` can be used by either installing it as a Python package, for which a `pyproject.toml` and `requirements.txt` are included, or by adding `src/` to the system path and importing it.
+The tools provided by `dqmexplore` can be utilized either by installing it as a Python package by running
 
-### Accessing and Plotting Data with `dqmexplore` & `cmsdials`
+```
+pip3 install git+https://github.com/CMSTrackerDPG/DQMExplore.git
+```
 
-In `src/utils/setupdials.py`, the small function `setup_dials_object_deviceauth()` ([original source](https://github.com/cms-DQM/dials-py/blob/develop/tests/integration/utils.py)) is included. This function will automate the setup of DIALS so you can start accesing ME data easily. Here is an example usage where we use it to access some PixelPhase1 1D monitoring elements for run 380238:
+or by cloning the repository, adding the `src/` directory to the system path and importing the `dqmexplore` package. Alternatively, you can use the provided setup script by following the instructions below.
+
+### LXPLUS
+
+Connect to the cluster by running:
+
+```bash
+ssh -Y rcruzcan@lxplus.cern.ch -L localhost:8080:localhost:8080
+```
+
+To run the setup script, execute the following commands:
+
+```bash
+wget https://raw.githubusercontent.com/CMSTrackerDPG/DQMExplore/main/setup.sh
+chmod +x setup.sh
+./setup.sh
+```
+
+This script will create a working directory named `DQME`, clone the repository, and install all dependencies into a Python virtual environment. Note that the setup script will prompt you for your CERN SSO client ID  and secret (instructions on how to obtain these are linked in [Relevant Documentation](#relevant-documentation)). This is only necessary if you wish to use the included scripts that fetch data from Run Registry (e.g. [`fetch_golden.py`](src/scripts/fetch_golden.py)). Otherwise, you may press Enter for both prompts and it will generate a template .env file which you can configure later if needed.
+
+## Accessing & Plotting Data
+
+### Notebooks
+
+A number of [notebooks](notebooks/) are included with template workflows for interactive exploration of Tracker monitoring elements. To use any of the notebooks, run:
+
+```
+jupyter notebook --no-browser --port=8080
+```
+
+and open the provided link in your favorite browser.
+
+### Scripts
+
+Various scripts are located in the [scripts](scripts/) and [src/scripts](src/scripts/) directories. If you are in a virtual environment with `dqmexplore` installed, you can run the scripts in the latter directory directly as commands. For instance, to generate a user-defined golden json using a configuration file `configs/rr_config.json`, run:
+
+```
+fetch_golden -l configs/rr_config.json
+```
+
+### Using in Your Code
+
+To integrate the tools provided in this repository into your own code, you can install `dqmexplore` into your virtual environment by running:
+
+```python
+pip3 install
+```
+
+and import it directly. Alternatively, you can append the source directory to your path link so:
 
 ```python
 import sys
-sys.path.append("../src/")
-
-# Setup DIALS
-from utils.setupdials import setup_dials_object_deviceauth
-dials = setup_dials_object_deviceauth()
-
-# Query
-runnb = 380238
-me__regex =  "PixelPhase1/Tracks/PXBarrel/charge_PXLayer_." 
-
-data1D = dials.h1d.list_all(
-    LumisectionHistogram1DFilters(
-        run_number = runnb,
-        dataset__regex = "ZeroBias",
-        me__regex = me__regex
-    ),
-    # max_pages=200
-).to_pandas() # Returns a Dataframe
+sys.path.append("path/to/dqme/root/dir/src")
+import dqmexplore as dqme
 ```
 
-When run, this will prompt the user to follow a link which, when clicked will open a webpage which will prompt you to log in using your CERN account. One logged in, click "Yes" when it asks if you want to grant access privileges to cms-dials-prod-confidential-app. Once that is done, come back to your notebook. For more information, please visit the [DIALS Python API repository](https://github.com/cms-DQM/dials-py).
+## Relevant Documentation & Resources
 
-For examples on how to use the tools provided by `dqmexplore` to plot the data obtained from `cmsdials`, please refer to the notebooks found in `notebooks/`.
+* [CERN SSO registration instructions](https://github.com/CMSTrackerDPG/cernrequests#for-cern-apis-using-the-new-sso)
+* [DIALS Python API repository](https://gitlab.cern.ch/cms-dqmdc/libraries/dials-py/-/tree/develop)
+* [Run Registry Python API repository](https://gitlab.cern.ch/cms-dqmdc/libraries/runregistry_api_client)
