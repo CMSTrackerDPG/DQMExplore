@@ -1,4 +1,5 @@
 clientid.json
+.env
 data
 poetry.lock
 .cache
