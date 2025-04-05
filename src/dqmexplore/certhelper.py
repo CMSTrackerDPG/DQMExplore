@@ -31,8 +31,12 @@ class CHRunData:
     def getGoodRuns(self):
         return self.RunsDF[self.RunsDF["good_lss"].notnull()]
 
-    def getRuns(self, exclude_bad=True):
+    def getRuns(self, exclude_bad=False):
         if exclude_bad:
+            if not hasattr(self, "goldenDF"):
+                raise LookupError(
+                    "Golden JSON file not set. Cannot filter for good runs."
+                )
             return self.getGoodRuns()
         else:
             return self.RunsDF
@@ -118,11 +122,9 @@ class CHRunData:
         except Exception:
             raise Exception("Run is not available.")
 
-    def getRefFromRun(self, run, reco_type=None):
-        run_info = self.getRun(run, reco_type=reco_type)
-        if len(run_info) == 0:
-            raise LookupError("No matches found.")
-        elif len(run_info) == 1:
-            return run_info["reference_run_number"].iloc[0]
-        else:
-            return run_info
+    def searchRuns(self, runnbs, ref=False):
+        if not isinstance(runnbs, list):
+            runnbs = [runnbs]
+        return self.RunsDF[
+            self.RunsDF["reference_run_number" if ref else "run_number"].isin(runnbs)
+        ]

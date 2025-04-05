@@ -9,6 +9,6 @@ import dqmexplore.staticplt
 import dqmexplore.trends
 
 # Utilities
-from dqmexplore.utils import datautils, omsutils, setupdials
+import dqmexplore.utils
 import dqmexplore.oms
 import dqmexplore.anomaly
