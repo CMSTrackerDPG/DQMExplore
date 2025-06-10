@@ -5,17 +5,27 @@ import pandas as pd
 
 class CHRunData:
     """
-    Class to organize the Reference Runs information from the CertHelper API
-    Credit for original JSON implementation: Gabriele Benelli
+    Certification Helper data manager.
+
+    This class is used to load and manage the Certification Helper data.
+
+    Attributes:
+        RunsDF (pd.DataFrame): DataFrame containing the run data.
+        goldenDF (pd.DataFrame): DataFrame containing the golden run data.
     """
 
-    def __init__(self, JSONFilePath, goldenJSONFilePath=None, filtergolden=True):
+    def __init__(
+        self,
+        JSONFilePath: str,
+        goldenJSONFilePath: str | None = None,
+        filtergolden: bool = True,
+    ) -> None:
         self.RunsDF = loadJSONasDF(JSONFilePath)
         self.RunsDF.dropna(inplace=True)
         self._setGolden(goldenJSONFilePath)
         self.RunsDF.sort_values("run_number", inplace=True)
 
-    def _setGolden(self, goldenJSONFilePath=None):
+    def _setGolden(self, goldenJSONFilePath: str | None = None) -> None:
         if goldenJSONFilePath is None:
             return
         self.goldenDF = loadJSONasDF(goldenJSONFilePath)
@@ -28,10 +38,10 @@ class CHRunData:
             self.RunsDF["good_lss"].notna(), None
         )
 
-    def getGoodRuns(self):
+    def getGoodRuns(self) -> pd.DataFrame:
         return self.RunsDF[self.RunsDF["good_lss"].notnull()]
 
-    def getRuns(self, exclude_bad=False):
+    def getRuns(self, exclude_bad: bool = False) -> pd.DataFrame:
         if exclude_bad:
             if not hasattr(self, "goldenDF"):
                 raise LookupError(
@@ -41,7 +51,7 @@ class CHRunData:
         else:
             return self.RunsDF
 
-    def getRun(self, runnb, reco_type=None):
+    def getRun(self, runnb: int, reco_type: str | None = None) -> pd.DataFrame:
         if reco_type not in [None, "express", "prompt"]:
             raise ValueError("Unexpected value for reconstruction type given.")
         if reco_type is None:
@@ -52,7 +62,9 @@ class CHRunData:
                 & (self.RunsDF["run_reconstruction_type"] == reco_type)
             ]
 
-    def applyFilter(self, filters={}, exclude_bad=True, return_df=True):
+    def applyFilter(
+        self, filters: dict = {}, exclude_bad: bool = True, return_df: bool = True
+    ) -> pd.DataFrame | list:
         if exclude_bad:
             RunsDF = self.getGoodRuns()
         else:
@@ -93,7 +105,7 @@ class CHRunData:
         else:
             return RunsDF[mask]["run_number"].to_list()
 
-    def getruns(self, run, colfilters=None):
+    def getruns(self, run: int, colfilters: list | None = None) -> pd.DataFrame:
         CHftrs = [
             "run_number",
             "run_reconstruction_type",
@@ -122,7 +134,7 @@ class CHRunData:
         except Exception:
             raise Exception("Run is not available.")
 
-    def searchRuns(self, runnbs, ref=False):
+    def searchRuns(self, runnbs: int | list, ref: bool = False) -> pd.DataFrame:
         if not isinstance(runnbs, list):
             runnbs = [runnbs]
         return self.RunsDF[
