@@ -15,7 +15,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "cmsdials[pandas,tqdm]>=1.5.0",
+    "cmsdials[pandas]>=1.5.0",
     "notebook>=7.3.2",
     "runregistry>=3.1.1",
     "plotly>=6.0.0",
