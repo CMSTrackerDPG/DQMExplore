@@ -90,14 +90,14 @@ def trig_normalize(data_dict, trigger_rates: np.ndarray) -> np.ndarray:
     return data_dict
 
 
-def makeDF(json):
-    datadict = json["data"][0]["attributes"]
+def makeDF(data):
+    datadict = data["data"][0]["attributes"]
     keys = datadict.keys()
 
     datasetlist = []
 
-    for i in range(len(json["data"])):
-        values = json["data"][i]["attributes"].values()
+    for i in range(len(data["data"])):
+        values = data["data"][i]["attributes"].values()
         datasetlist.append(values)
     return pd.DataFrame(datasetlist, columns=keys)
 
