@@ -84,3 +84,7 @@ def main():
         search_results.to_csv(args.fname, index=False)
     else:
         raise ValueError("Output file must be either a JSON or CSV file.")
+
+
+if __name__ == "__main__":
+    main()
