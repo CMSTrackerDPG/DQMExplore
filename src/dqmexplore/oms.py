@@ -4,7 +4,12 @@ from cmsdials.filters import OMSFilter, OMSPage
 from dqmexplore.utils.datautils import makeDF
 
 
-def get_rate(dials, runnb, dataset_name="ZeroBias", extrafilters=[]):
+def get_rate(runnb, dials=None, dataset_name="ZeroBias", extrafilters=[]):
+    if dials is None:
+        from dqmexplore.utils.setupdials import setup_dials_object_deviceauth
+
+        dials = setup_dials_object_deviceauth()
+
     filters = [
         OMSFilter(attribute_name="run_number", value=runnb, operator="EQ"),
         OMSFilter(attribute_name="dataset_name", value=dataset_name, operator="EQ"),
