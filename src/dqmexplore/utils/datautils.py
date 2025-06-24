@@ -3,6 +3,10 @@ import numpy as np
 import os
 import json
 import requests
+from cmsdials.filters import (
+    LumisectionHistogram1DFilters,
+    LumisectionHistogram2DFilters,
+)
 from dqmexplore.me_ids import meIDs1D, meIDs2D
 
 
@@ -155,3 +159,45 @@ def loadFromWeb(url, output_file):
             print(f"Failed to fetch data. HTTP Status Code: {response.status_code}")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+def fetch_data(runnb: int, me_names: list[str], dials=None) -> pd.DataFrame:
+    if dials is None:
+        from dqmexplore.utils.setupdials import setup_dials_object_deviceauth
+
+        dials = setup_dials_object_deviceauth()
+
+    me_id_map = get_me_id_map().set_index("me")
+    query_rslts = {}
+    for me_name in me_names:
+        if me_id_map.loc[me_name]["dim"] == 1:
+            query_rslts[me_name] = dials.h1d.list_all(
+                LumisectionHistogram1DFilters(
+                    run_number=runnb,
+                    dataset__regex="ZeroBias",
+                    me=me_name,
+                ),
+                max_pages=200,
+            ).to_pandas()
+        elif me_id_map.loc[me_name]["dim"] == 2:
+            query_rslts[me_name] = dials.h2d.list_all(
+                LumisectionHistogram2DFilters(
+                    run_number=runnb,
+                    dataset__regex="ZeroBias",
+                    me=me_name,
+                ),
+                max_pages=200,
+            ).to_pandas()
+        else:
+            raise ValueError(f"Unrecognized monitoring element id number for {me_name}")
+
+    query_rslt = pd.concat(
+        [df for df in query_rslts.values() if df is not None], ignore_index=True
+    )
+    return query_rslt
+
+
+def get_me_id_map():
+    this_dir = os.path.dirname(__file__)
+    json_path = os.path.join(this_dir, "me_id_map.json")
+    return pd.read_json(json_path)
