@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import json
 
 
 def plotMEs1D_static(
@@ -55,13 +56,13 @@ def create_plot_static(me_data, fig_title="", ref_data=None, ax_labels=None):
         if me_data.getDims() == 1:
             trace = go.Bar()
             trace.x = me_data.getBins(me, dim="x")
-            trace.y = me_data.getData(me, type="integral")
+            trace.y = me_data.getData(me, data_type="integral")
             trace.name = me
         elif me_data.getDims() == 2:
             trace = go.Heatmap()
             trace.x = me_data.getBins(me, dim="x")
             trace.y = me_data.getBins(me, dim="y")
-            trace.z = me_data.getData(me, type="integral")
+            trace.z = me_data.getData(me, data_type="integral")
             trace.name = me
         fig.add_trace(trace, row=row, col=col)
 
@@ -110,29 +111,38 @@ def create_plot_static(me_data, fig_title="", ref_data=None, ax_labels=None):
 
 def plotheatmaps1D(
     me_data,
-    fig_title="",
-    ax_labels=None,
+    plots_config: dict | str,
+    fig_config: dict | str,
     trigger_rates=None,
-    norm=False,
     show=False,
 ):
+    """Plot heatmaps for 1D MEs."""
 
-    if (
-        norm and trigger_rates is not None
-    ):  # There shouldn't be the both types of normalizations at the same time
-        raise ValueError("Normalize by area or trigger rate, not both.")
+    if isinstance(plots_config, str):
+        with open(plots_config, "r") as f:
+            plots_config = json.load(f)
+    if isinstance(fig_config, str):
+        with open(fig_config, "r") as f:
+            fig_config = json.load(f)
 
-    if trigger_rates is not None:
-        to_plot = "trignorm"
-        me_data.normData(trigger_rate=trigger_rates)
-    elif norm:
-        to_plot = "norm"
-        me_data.normData()
-    else:
-        to_plot = "data"
+    # Normalizing
+    for me_name, config in plots_config.items():
+        if config.get("norm"):
+            if (config.get("norm") == "trig") and (trigger_rates is None):
+                raise ValueError(
+                    "Trigger rate normalization requested, but trigger rates are not provided."
+                )
+            me_data.normData(
+                trigger_rate=(
+                    trigger_rates if config.get("norm") == "trignorm" else None
+                ),
+                mes=[me_name],
+            )
 
     fig = create_heatmap(
-        me_data, fig_title=fig_title, ax_labels=ax_labels, to_plot=to_plot
+        me_data,
+        plots_config,
+        fig_config,
     )
 
     if show:
@@ -141,46 +151,63 @@ def plotheatmaps1D(
         return fig
 
 
-def create_heatmap(me_data, fig_title="", ax_labels=None, to_plot="data"):
-
-    mes = me_data.getMENames()
-    num_mes = len(me_data)
+def create_heatmap(me_data, plots_config: dict, fig_config: dict = {}) -> go.Figure:
+    """Create a heatmap figure from the given ME data."""
+    mes = list(plots_config.keys())
+    num_mes = len(mes)
     num_rows = (num_mes + 1) // 2
     num_cols = 2 if num_mes > 1 else 1
 
     # Making figure object
+    subplot_titles = (
+        [me.split("/")[-1] for me in mes]
+        if fig_config.get("short_titles", False)
+        else mes
+    )
     fig = make_subplots(
         rows=num_rows,
         cols=num_cols,
-        subplot_titles=mes,
-        vertical_spacing=0.1,
-        horizontal_spacing=0.1,
+        subplot_titles=subplot_titles,
+        vertical_spacing=fig_config.get("vspace", 0.1),
+        horizontal_spacing=fig_config.get("hspace", 0.1),
     )
 
     # Adding heatmap trace to figure
     for i, me in enumerate(mes):
         row = (i // 2) + 1
         col = (i % 2) + 1
+        config = plots_config[me]
+        to_plot = config.get("norm", None)
         fig.add_trace(
             go.Heatmap(
-                z=me_data.getData(me, type=to_plot),
+                z=me_data.getData(me, data_type=to_plot),
                 x=me_data.getBins(me, dim="x"),
                 showscale=False,
             ),
             row=row,
             col=col,
         )
-        if ax_labels is not None:
-            fig.update_xaxes(title_text=ax_labels[i]["x"], row=row, col=col)
-            fig.update_yaxes(title_text=ax_labels[i]["y"], row=row, col=col)
+
+        # if ax_labels is not None:
+        fig.update_xaxes(
+            title_text=config.get("xlabel", None),
+            range=config.get("xlim", None),
+            row=row,
+            col=col,
+        )
+        fig.update_yaxes(
+            title_text=config.get("ylabel", "LS"),
+            range=config.get("ylim", None),
+            row=row,
+            col=col,
+        )
 
     # Adding layour elements to figure
     fig.update_layout(
-        title_text=fig_title,
+        title_text=fig_config.get("fig_title", None),
         title_font={"size": 24},
-        height=1100,
-        width=1100,
-        annotations=[dict(text=me, font={"size": 14}, showarrow=False) for me in mes],
+        height=fig_config.get("height", 1100),
+        width=fig_config.get("width", 1100),
     )
 
     fig.update_yaxes(autorange="reversed")
