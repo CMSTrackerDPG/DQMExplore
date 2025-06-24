@@ -2,23 +2,25 @@ from dqmexplore.utils.datautils import loadJSONasDF, loadFromWeb
 from fnmatch import fnmatch
 import pandas as pd
 
+chftrs = [
+    "run_number",
+    "run_reconstruction_type",
+    "reference_run_number",
+    "reference_run_reconstruction_type",
+    "dataset",
+]
+
 
 class CHRunData:
     """
     Certification Helper data manager.
-
     This class is used to load and manage the Certification Helper data.
-
-    Attributes:
-        RunsDF (pd.DataFrame): DataFrame containing the run data.
-        goldenDF (pd.DataFrame): DataFrame containing the golden run data.
     """
 
     def __init__(
         self,
         JSONFilePath: str,
         goldenJSONFilePath: str | None = None,
-        filtergolden: bool = True,
     ) -> None:
         self.RunsDF = loadJSONasDF(JSONFilePath)
         self.RunsDF.dropna(inplace=True)
@@ -63,7 +65,7 @@ class CHRunData:
             ]
 
     def applyFilter(
-        self, filters: dict = {}, exclude_bad: bool = True, return_df: bool = True
+        self, filters: dict = {}, exclude_bad: bool = False, return_df: bool = True
     ) -> pd.DataFrame | list:
         if exclude_bad:
             RunsDF = self.getGoodRuns()
@@ -105,34 +107,44 @@ class CHRunData:
         else:
             return RunsDF[mask]["run_number"].to_list()
 
-    def getruns(self, run: int, colfilters: list | None = None) -> pd.DataFrame:
-        CHftrs = [
-            "run_number",
-            "run_reconstruction_type",
-            "reference_run_type",
-            "reference_run_reconstruction_type",
-            "dataset",
-        ]
-        try:
-            runs = self.RunsDF[self.RunsDF["run_number"] == run]
-            if colfilters is None:
-                return runs
+    def getruns(self, **kwargs) -> pd.DataFrame:
+        """
+        Get runs based on the provided keyword arguments.
+
+        Args:
+            **kwargs: Keyword arguments to filter runs. Valid keys are:
+                - run_number
+                - run_reconstruction_type
+                - reference_run_number
+                - reference_run_reconstruction_type
+                - dataset
+        Returns:
+            pd.DataFrame: DataFrame containing the filtered runs.
+        """
+        runs = self.RunsDF
+        for key, value in kwargs.items():
+            if key in chftrs:
+                runs = runs[runs[key] == value]
             else:
-                if isinstance(colfilters, list):
-                    badftrs = []
-                    for colfilter in colfilters:
-                        if colfilter not in CHftrs:
-                            badftrs.append(colfilter)
-                            print(
-                                "WARNING: {} not a valid CH feature. Skipping.".format(
-                                    colfilter
-                                )
-                            )
-                    return runs[list(set(colfilters) - set(badftrs))]
-                else:
-                    raise Exception("colfilters must be of type list")
-        except Exception:
-            raise Exception("Run is not available.")
+                print(f"Warning: Unexpected key '{key}' in input filter.")
+        return runs
+
+    def getRefRun(self, runnb: int, **kwargs) -> int:
+        """
+        Uses getruns to get the reference run number for a given run number.
+        Fails if multiple reference runs are found.
+        """
+        runs = self.getRuns(run_number=runnb, **kwargs)
+
+        if len(runs) > 1:
+            raise LookupError(
+                f"Multiple runs found for run number {runnb}. Please refine your search."
+            )
+
+        if len(runs) == 0:
+            return -1
+
+        return int(runs["reference_run_number"].values[0])
 
     def searchRuns(self, runnbs: int | list, ref: bool = False) -> pd.DataFrame:
         if not isinstance(runnbs, list):
