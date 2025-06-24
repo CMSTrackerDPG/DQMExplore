@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dqmexplore"
-version = "0.2.0"
+version = "1.0.0"
 description = "A consolidation of DQM data exploration tools."
 authors = [
     {name = "Gabriele Benelli", email = "gabriele.benelli@cern.ch"},
@@ -32,6 +32,7 @@ dev = [
 fetch_refruns = "scripts.fetch_refruns:main"
 fetch_golden = "scripts.fetch_golden:main"
 search_runs = "scripts.search_runs:main"
+plotMEs = "scripts.plotMEs:main"
 
 [project.urls]
 Repository = "https://github.com/CMSTrackerDPG/DQMExplore"

@@ -2,7 +2,6 @@ from dqmexplore.certhelper import CHRunData
 import argparse
 import os
 from tabulate import tabulate
-import warnings
 
 
 def main():
