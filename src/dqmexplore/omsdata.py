@@ -8,7 +8,11 @@ OPS = ["EQ", "NEQ", "LT", "GT", "LE", "GE", "LIKE"]
 
 
 class OMSData:
-    def __init__(self, dials):
+    def __init__(self, dials=None):
+        if not dials:
+            from dqmexplore.utils.setupdials import setup_dials_object_deviceauth
+
+            dials = setup_dials_object_deviceauth()
         self.dials = dials
         self.endpoints = [
             "runs",
