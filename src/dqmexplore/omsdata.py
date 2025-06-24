@@ -61,11 +61,6 @@ class OMSData:
     def setFilters(self, filters: dict | str) -> dict:
         """
         Set filters for the data fetch.
-
-        Two types of filters: period filters & feature filters.
-        Period filters are run_number and fill_number.
-        Feature filters are any other attribute filters.
-
         """
 
         if isinstance(filters, str):
@@ -75,7 +70,7 @@ class OMSData:
         self._resetFilters()
         if "runs" not in filters.keys() and "fills" not in filters.keys():
             print(
-                "WARNING: No period filters set. Use run_number or fill_number to set filters."
+                "WARNING: No temporal filters set. Use run_number or fill_number to set filters."
             )
         attr_fltrs = {"runs": [], "filters": []}
         runs = filters.get("runs", None)
