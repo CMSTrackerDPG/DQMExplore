@@ -161,38 +161,52 @@ def loadFromWeb(url, output_file):
         print(f"An error occurred: {e}")
 
 
-def fetch_data(runnb: int, me_names: list[str], dials=None) -> pd.DataFrame:
+def fetch_data(
+    runnbs: int | list[int], me_names: list[str], dials=None
+) -> pd.DataFrame:
     if dials is None:
         from dqmexplore.utils.setupdials import setup_dials_object_deviceauth
 
         dials = setup_dials_object_deviceauth()
 
     me_id_map = get_me_id_map().set_index("me")
-    query_rslts = {}
-    for me_name in me_names:
-        if me_id_map.loc[me_name]["dim"] == 1:
-            query_rslts[me_name] = dials.h1d.list_all(
-                LumisectionHistogram1DFilters(
-                    run_number=runnb,
-                    dataset__regex="ZeroBias",
-                    me=me_name,
-                ),
-                max_pages=200,
-            ).to_pandas()
-        elif me_id_map.loc[me_name]["dim"] == 2:
-            query_rslts[me_name] = dials.h2d.list_all(
-                LumisectionHistogram2DFilters(
-                    run_number=runnb,
-                    dataset__regex="ZeroBias",
-                    me=me_name,
-                ),
-                max_pages=200,
-            ).to_pandas()
-        else:
-            raise ValueError(f"Unrecognized monitoring element id number for {me_name}")
+    if isinstance(runnbs, int):
+        runnbs = [runnbs]
+
+    query_rslts = {runnb: {} for runnb in runnbs}
+    for runnb in runnbs:
+        for me_name in me_names:
+            if me_id_map.loc[me_name]["dim"] == 1:
+                query_rslts[runnb][me_name] = dials.h1d.list_all(
+                    LumisectionHistogram1DFilters(
+                        run_number=runnb,
+                        dataset__regex="ZeroBias",
+                        me=me_name,
+                    ),
+                    max_pages=200,
+                ).to_pandas()
+            elif me_id_map.loc[me_name]["dim"] == 2:
+                query_rslts[runnb][me_name] = dials.h2d.list_all(
+                    LumisectionHistogram2DFilters(
+                        run_number=runnb,
+                        dataset__regex="ZeroBias",
+                        me=me_name,
+                    ),
+                    max_pages=200,
+                ).to_pandas()
+            else:
+                raise ValueError(
+                    f"Unrecognized monitoring element id number for {me_name} for "
+                )
 
     query_rslt = pd.concat(
-        [df for df in query_rslts.values() if df is not None], ignore_index=True
+        [
+            df
+            for runnb in runnbs
+            for df in query_rslts[runnb].values()
+            if df is not None
+        ],
+        ignore_index=True,
     )
     return query_rslt
 
