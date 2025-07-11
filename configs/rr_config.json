@@ -1,0 +1,9 @@
+{
+  "and": [
+    {">=": [{"var": "run.oms.run_number"}, 378981]},
+    {"<=": [{"var": "run.oms.run_number"}, 387721]},
+    {"==": [{"var": "lumisection.rr.tracker-pixel"}, "GOOD"]},
+    {"==": [{"var": "lumisection.rr.tracker-strip"}, "GOOD"]},
+    {"==": [{"var": "lumisection.rr.tracker-track"}, "GOOD"]}
+  ]
+}

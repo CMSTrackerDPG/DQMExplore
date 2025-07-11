@@ -3,7 +3,12 @@ import numpy as np
 import os
 import json
 import requests
+from cmsdials.filters import (
+    LumisectionHistogram1DFilters,
+    LumisectionHistogram2DFilters,
+)
 from dqmexplore.me_ids import meIDs1D, meIDs2D
+
 
 def generate_me_dict(me_df):
     """
@@ -89,14 +94,14 @@ def trig_normalize(data_dict, trigger_rates: np.ndarray) -> np.ndarray:
     return data_dict
 
 
-def makeDF(json):
-    datadict = json["data"][0]["attributes"]
+def makeDF(data):
+    datadict = data["data"][0]["attributes"]
     keys = datadict.keys()
 
     datasetlist = []
 
-    for i in range(len(json["data"])):
-        values = json["data"][i]["attributes"].values()
+    for i in range(len(data["data"])):
+        values = data["data"][i]["attributes"].values()
         datasetlist.append(values)
     return pd.DataFrame(datasetlist, columns=keys)
 
@@ -120,6 +125,7 @@ def print_availMEs(dials, dims=None, contains=""):
     for me in mes_df[mes_df["me"].str.contains(contains)]["me"]:
         print(me)
 
+
 def loadJSONasDF(JSONFilePath):
     if not os.path.exists(JSONFilePath):
         raise FileNotFoundError(
@@ -131,24 +137,81 @@ def loadJSONasDF(JSONFilePath):
         JSONdict = json.load(f)
     try:
         jsondf = pd.DataFrame(JSONdict).convert_dtypes()
-    except:
+    except Exception:
         jsondf = pd.DataFrame(JSONdict.items()).convert_dtypes()
     return jsondf
 
+
 def loadFromWeb(url, output_file):
     try:
-        # Make request and check if succesful
+        # Make request and check if successful
         response = requests.get(url)
         if response.status_code == 200:
             # Parse the response content as JSON
             data = response.json()
-            
+
             # Store the data as JSON
-            with open(output_file, 'w') as file:
+            with open(output_file, "w") as file:
                 json.dump(data, file, indent=4)
-            
+
             print(f"Data successfully fetched and stored in {output_file}")
         else:
             print(f"Failed to fetch data. HTTP Status Code: {response.status_code}")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+def fetch_data(
+    runnbs: int | list[int], me_names: list[str], dials=None
+) -> pd.DataFrame:
+    if dials is None:
+        from dqmexplore.utils.setupdials import setup_dials_object_deviceauth
+
+        dials = setup_dials_object_deviceauth()
+
+    me_id_map = get_me_id_map().set_index("me")
+    if isinstance(runnbs, int):
+        runnbs = [runnbs]
+
+    query_rslts = {runnb: {} for runnb in runnbs}
+    for runnb in runnbs:
+        for me_name in me_names:
+            if me_id_map.loc[me_name]["dim"] == 1:
+                query_rslts[runnb][me_name] = dials.h1d.list_all(
+                    LumisectionHistogram1DFilters(
+                        run_number=runnb,
+                        dataset__regex="ZeroBias",
+                        me=me_name,
+                    ),
+                    max_pages=200,
+                ).to_pandas()
+            elif me_id_map.loc[me_name]["dim"] == 2:
+                query_rslts[runnb][me_name] = dials.h2d.list_all(
+                    LumisectionHistogram2DFilters(
+                        run_number=runnb,
+                        dataset__regex="ZeroBias",
+                        me=me_name,
+                    ),
+                    max_pages=200,
+                ).to_pandas()
+            else:
+                raise ValueError(
+                    f"Unrecognized monitoring element id number for {me_name} for "
+                )
+
+    query_rslt = pd.concat(
+        [
+            df
+            for runnb in runnbs
+            for df in query_rslts[runnb].values()
+            if df is not None
+        ],
+        ignore_index=True,
+    )
+    return query_rslt
+
+
+def get_me_id_map():
+    this_dir = os.path.dirname(__file__)
+    json_path = os.path.join(this_dir, "me_id_map.json")
+    return pd.read_json(json_path)

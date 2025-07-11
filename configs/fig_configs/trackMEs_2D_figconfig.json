@@ -1,0 +1,9 @@
+{
+    "figure_title": "Tracks (Run 380238)",
+    "short_titles": true,
+    "width": 1000,
+    "height": 1000,
+    "vspace": 0.15,
+    "hspace": 0.15,
+    "description": "Configuration for plotting tracking monitoring elements."
+}

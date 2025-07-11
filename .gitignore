@@ -1,6 +1,9 @@
 clientid.json
+.env
 data
 poetry.lock
 .cache
 *.html
 __pycache__
+jsons/*.json
+.ipynb_checkpoints

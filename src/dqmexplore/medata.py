@@ -1,14 +1,16 @@
 import numpy as np
 from dqmexplore.me_ids import meIDs1D, meIDs2D
 import warnings
+import pandas as pd
 
 
 class MEData:
-    def __init__(self, me_df):
+    def __init__(self, me_df: pd.DataFrame):
         self.me_dict = {}
         self._generate_me_dict(me_df)
 
-    def _generate_me_dict(self, me_df):
+    def _generate_me_dict(self, me_df: pd.DataFrame):
+        """Generate a dictionary of monitoring elements (MEs) from the provided DataFrame."""
         if len(me_df) == 0:
             warnings.warn("Input DataFrame is empty.")
         mes = list(me_df["me"].unique())
@@ -45,30 +47,30 @@ class MEData:
             self.me_dict[me]["dim"] = dim
             self.me_dict[me]["data"] = data_arr
             self.me_dict[me]["entries"] = entries
-            # self.me_dict[me]["integral"] = None
-            # self.me_dict[me]["norm"] = None
-            # self.me_dict[me]["trignorm"] = None
+
         self._setEmptyLSs()
         self.excludelumis = []
         self.numLSs = len(self.getData(self.getMENames()[0]))
 
-    def __getitem__(self, me):
+    def __getitem__(self, me: str):
         return self.me_dict[me]
 
     def __len__(self):
         return len(self.me_dict)
 
-    def getData(self, me, ls=None, type="data"):
-        if ls is not None and not isinstance(ls, int):
-            raise TypeError("LS should either be None or a positive integer.")
-
-        if (ls is not None) and (type == "integral"):
+    def getData(
+        self, me: str, ls: int | None = None, data_type: str = "data"
+    ) -> np.ndarray:
+        """Get data for a given monitoring element (ME)."""
+        if (ls is not None) and (data_type == "integral"):
             raise ValueError("Cannot select LS in integrated data.")
 
+        if data_type is None:
+            data_type = "data"
         if ls is None:
-            return self.me_dict[me][type]
+            return self.me_dict[me][data_type]
         else:
-            return self.me_dict[me][type][ls - 1]
+            return self.me_dict[me][data_type][ls - 1]
 
     def getNumLSs(self):
         return self.numLSs
@@ -94,7 +96,7 @@ class MEData:
         return list(self.me_dict.keys())
 
     def getEmptyLSs(self, me):
-        return self.me_dict[me]["emptyLSs"]
+        return np.array(self.me_dict[me]["emptyLSs"])
 
     def getIntegral(self, me):
         return self.me_dict[me]["integral"]
@@ -152,13 +154,32 @@ class MEData:
         for me in self.getMENames():
             medata = self.getData(me)
             dims = self.getDims(me)
+
+            # Check length of trigger rate array
+            if len(trigger_rate) > medata.shape[0]:
+                print("SHORTENING")
+                trigger_rate = trigger_rate[: medata.shape[0]]
+            elif len(trigger_rate) < medata.shape[0]:
+                raise ValueError(
+                    "Trigger rate array is shorter than the number of LSs in the data."
+                )
+            if len(trigger_rate) == 0:
+                raise ValueError("Trigger rate array is empty.")
+
+            # Set data to 0 for lumisections where trigger_rate is 0
+            trig_rate = np.where(trigger_rate == 0, 1, trigger_rate)
+            medata = np.where(trigger_rate[:, np.newaxis] == 0, 0, medata)
+
             if dims == 1:
-                self.me_dict[me]["trignorm"] = medata / trigger_rate[:, np.newaxis]
+                self.me_dict[me]["trignorm"] = medata / trig_rate[:, np.newaxis]
             elif dims == 2:
                 n = medata.shape[1]
                 m = medata.shape[2]
+                medata = np.where(
+                    trigger_rate[:, np.newaxis, np.newaxis] == 0, 0, medata
+                )
                 self.me_dict[me]["trignorm"] = medata / np.repeat(
-                    trigger_rate[:, np.newaxis], n * m, axis=1
+                    trig_rate[:, np.newaxis], n * m, axis=1
                 ).reshape(-1, n, m)
             else:
                 raise ValueError("Dimensions can only be 1 or 2.")

@@ -1,0 +1,21 @@
+{
+    "Tracking/TrackParameters/highPurityTracks/pt_1/GeneralProperties/TrackEta_ImpactPoint_GenTk": {
+        "xlabel": "Track Eta",
+        "norm": "norm"
+    },
+    "Tracking/TrackParameters/highPurityTracks/pt_1/GeneralProperties/TrackPhi_ImpactPoint_GenTk": {
+        "xlabel": "Track Phi",
+        "norm": "norm"
+    },
+    "Tracking/TrackParameters/highPurityTracks/pt_1/GeneralProperties/TrackPt_ImpactPoint_GenTk": {
+        "xlim": [0, 20],
+        "xlabel": "Track Pt",
+        "logy": true,
+        "norm": "norm"
+    },
+    "Tracking/TrackParameters/highPurityTracks/pt_1/GeneralProperties/TrackQoverP_ImpactPoint_GenTk": {
+        "xlim": [-1.1, 1.1],
+        "xlabel": "Track Q/P",
+        "norm": "norm"
+    }
+}

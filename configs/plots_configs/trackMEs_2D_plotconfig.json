@@ -1,0 +1,7 @@
+{
+    "Tracking/TrackParameters/highPurityTracks/pt_1/GeneralProperties/TrackEtaPhi_ImpactPoint_GenTk": {
+        "xlabel": "Track Eta",
+        "ylabel": "Track Phi",
+        "norm": "norm"
+    }
+}
