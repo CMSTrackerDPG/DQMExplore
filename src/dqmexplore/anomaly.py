@@ -37,7 +37,7 @@ class Anomaly:
         anomaly: dict[str, any] | None = None,
     ) -> pd.DataFrame | None:
         """
-        Add entries to anomaly DataFrame for a given run. If the run does not exist, it will create a new one.
+        Add entries to anomaly DataFrame for a given method. If the method does not exist, it also adds it.
         """
 
         if method not in self.anomalies:
@@ -70,8 +70,7 @@ class Anomaly:
 
     def addEntries(self, method: str, anomalies: list[dict]) -> pd.DataFrame:
         """
-        Add multiple entries to the anomaly DataFrame of a particular run.
-        Each entry should be a dictionary with keys matching the DataFrame columns.
+        Add multiple entries to the anomaly DataFrame of a particular method.
         """
 
         for anomaly in anomalies:
@@ -85,7 +84,7 @@ class Anomaly:
         run_number: int,
     ) -> None:
         """
-        Remove an entry from the anomaly DataFrame based on run_number, method, or anomaly_desc.
+        Remove an entries matching a given run number from the anomaly DataFrame of a particular method.
         """
 
         anomaly_df = self.anomalies.get(method, None)
@@ -106,7 +105,7 @@ class Anomaly:
 
     def rmMethod(self, method: str) -> None:
         """
-        Remove a run from the anomaly DataFrame.
+        Remove a method from the anomaly dictionary.
         """
         if method in self.anomalies:
             del self.anomalies[method]
@@ -138,7 +137,7 @@ class Anomaly:
 
     def __getitem__(self, method: str) -> pd.DataFrame:
         """
-        Get the anomaly DataFrame for a specific run number.
+        Get the anomaly DataFrame for a specific method.
         """
         if method in self.anomalies:
             return self.anomalies[method]
