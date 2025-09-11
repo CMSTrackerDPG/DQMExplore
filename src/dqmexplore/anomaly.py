@@ -126,6 +126,18 @@ class Anomaly:
         with open(os.path.join(path, fname), "w") as f:
             json.dump(anomalies_dict, f, indent=4)
 
+    def from_json(self, fname: str = "anomalies.json", path: str = ".") -> None:
+        """
+        Load anomalies from a JSON file into the anomalies dictionary.
+        """
+        import json
+
+        with open(os.path.join(path, fname), "r") as f:
+            anomalies_dict = json.load(f)
+
+        for method, records in anomalies_dict.items():
+            self.addMethod(method, records)
+
     def __str__(self):
         return self.anomalies.__str__()
 
